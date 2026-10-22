@@ -1,9 +1,11 @@
 # PlayGTA5 — download, play, and troubleshoot
+Este fork público é mantido em [dealni/playgta5](https://github.com/dealni/playgta5), a partir de [alihammoud21/playgta5](https://github.com/alihammoud21/playgta5). O hosting deste fork usa o projeto próprio `dealni-playgta5`; os downloads de jogo e os relatos históricos abaixo permanecem no projeto original, com seus créditos e proveniência.
+
 DISCORD SERVER!!
 
 https://discord.gg/ACgUGFwm4
 
-[**Play in browser / device check**](https://gta5-87g.pages.dev/__support/) · [**Download installer ZIP**](https://github.com/alihammoud21/playgta5/releases/download/full-game-v1/PlayGTA5-Installer-v2.zip) · [Installation](#download-and-play-on-windows) · [Mac](#download-and-play-on-mac) · [Higher-FPS setup](#performance--higher-fps) · [Report a problem](https://github.com/alihammoud21/playgta5/issues/new/choose)
+[**Play in browser / device check**](https://dealni-playgta5.pages.dev/__support/) · [**Download installer ZIP**](https://github.com/alihammoud21/playgta5/releases/download/full-game-v1/PlayGTA5-Installer-v2.zip) · [Installation](#download-and-play-on-windows) · [Mac](#download-and-play-on-mac) · [Higher-FPS setup](#performance--higher-fps) · [Report a problem](https://github.com/dealni/playgta5/issues/new/choose)
 
 **Want controllers, cheats, and the experimental development map?** Use the separate [**PlayGTA5 Enhanced** repository](https://github.com/alihammoud21/playgta5-enhanced). It reuses this installation and adds a launcher, standard-gamepad input bridge, cheat-code entry panel, and access to the existing `env_test` level. These are experimental additions.
 
@@ -17,13 +19,13 @@ The game data is approximately **21.2 GB (19.7 GiB)**. It is included in the rep
 | --- | --- |
 | Full download | Fresh installation: 12,527 game/runtime files passed SHA-256 verification. |
 | Windows / Mac launch tools | Automated installation/server checks passed; Mac gameplay still needs hardware testing. |
-| Public game hosting | [Cloudflare Pages is deployed](https://gta5-87g.pages.dev/__support/). Engine checksum, streaming compilation, isolation headers and real asset-range reads passed; this does not certify every mission/device. |
+| Public game hosting | [Cloudflare Pages is deployed](https://dealni-playgta5.pages.dev/__support/). Engine checksum, streaming compilation, isolation headers and real asset-range reads passed; this does not certify every mission/device. |
 | Black world / GPU device loss | Reports remain under investigation; basic WebGPU checks do not prove world rendering. |
 | FPS | Presets below reduce rendering load. No universal 90–200 FPS result has been measured for this release. |
 
 ## Graphics, controllers and unobstructed play
 
-The [browser hub](https://gta5-87g.pages.dev/__support/) offers Efficiency (720p/30, light), Balanced (720p/60, light), and Quality (1080p/60, full graphics) profiles. Save before switching; the game reloads. These are frame caps, not measured FPS guarantees.
+The [browser hub](https://dealni-playgta5.pages.dev/__support/) offers Efficiency (720p/30, light), Balanced (720p/60, light), and Quality (1080p/60, full graphics) profiles. Save before switching; the game reloads. These are frame caps, not measured FPS guarantees.
 
 Connect a standard controller by USB or Bluetooth, open the game in Chrome/Edge, and press a controller button. Click the game to capture the mouse. Left stick moves, right stick looks; View + Menu switches on-foot/driving mappings. The controller status button also switches modes. This is keyboard/mouse mapping, not native analog handling. Controller hardware still needs broader testing.
 
@@ -131,14 +133,16 @@ On Linux, use Python 3.11+ with `python3 download_game.py`, then `python3 serve_
 
 The repository's Vercel configuration now publishes only the small help site in `public/`; it no longer rebuilds the 21 GB game on every push. This change alone does not remove existing deployment storage or reactivate a disabled account. Old large deployments must be reviewed in the Vercel dashboard before that URL can be restored.
 
-The replacement **[Cloudflare Pages site is live](https://gta5-87g.pages.dev/__support/)**. Transport and engine compilation checks passed on October 13, 2026. Free hosting has no promise of permanent availability. Its current free limits allow 20,000 files with a maximum of 25 MiB each, and static requests are free and unlimited ([limits](https://developers.cloudflare.com/pages/platform/limits/), [pricing](https://developers.cloudflare.com/pages/functions/pricing/)). `build_pages.py` verifies the downloaded mirror and splits large assets into 4 MiB pieces. The browser loader reconstructs byte ranges using cached pieces; it does not depend on a server implementing HTTP Range, paid R2 storage, or Pages Functions. Generated output stays out of Git.
+The replacement **[Cloudflare Pages site is live](https://dealni-playgta5.pages.dev/__support/)**. Transport and engine compilation checks passed on October 22, 2026 (16,757 uploaded assets; maximum asset size 4 MiB). Free hosting has no promise of permanent availability. Its current free limits allow 20,000 files with a maximum of 25 MiB each, and static requests are free and unlimited ([limits](https://developers.cloudflare.com/pages/platform/limits/), [pricing](https://developers.cloudflare.com/pages/functions/pricing/)). `build_pages.py` verifies the downloaded mirror and splits large assets into 4 MiB pieces. The browser loader reconstructs byte ranges using cached pieces; it does not depend on a server implementing HTTP Range, paid R2 storage, or Pages Functions. Generated output stays out of Git.
 
 To build after downloading the game:
 
 ```sh
 python3 build_pages.py
-npx wrangler@4.149.0 pages deploy pages-output --project-name YOUR_PROJECT --branch main
+npx wrangler@4.152.0 pages deploy pages-output --project-name dealni-playgta5 --branch main
 ```
+
+Na criação inicial de um projeto próprio, `npx wrangler@4.152.0 pages project create dealni-playgta5 --production-branch main --force` seleciona Pages diretamente, evitando a delegação automática para Workers nesta versão do Wrangler. O deploy acima usa o projeto existente, sem `--force`. Não há Pages Functions, R2 ou recursos pagos neste pacote. Para republicar o mesmo pacote, mantenha o cache padrão: o Wrangler consulta os hashes existentes e envia apenas os arquivos ausentes.
 
 Building needs roughly **20 GB additional free disk space** alongside the local installation. The generated game uses HTTPS and COOP/COEP headers for WebGPU and shared-memory workers. Hosted defaults are lower-memory, 720p, and 30 FPS; explicit `low`, `res`, and `fps` URL parameters override them. The support page is at `/__support/`, with download instructions at `/help/`.
 
