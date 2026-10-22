@@ -127,6 +127,22 @@ class Handler(SimpleHTTPRequestHandler):
             outputfile.write(chunk)
             remaining -= len(chunk)
 
+    def select_batch_runs(self, runs):
+        """Validate paths/ranges and cap aggregate bytes before reading assets."""
+        selected = []
+        data_root = (ROOT / 'data').resolve()
+        for name, start, end in runs:
+            if not isinstance(name, str) or type(start) is not int or type(end) is not int:
+                raise ValueError('invalid file/range types')
+            file = (data_root / name).resolve()
+            if not file.is_relative_to(data_root) or start < 0 or end < start:
+                raise ValueError('invalid file/range')
+            selected.append((file, start, max(0, min(end + 1, file.stat().st_size) - start)))
+        total = sum(n for _, _, n in selected)
+        if total > 64 * 1024 * 1024:
+            raise ValueError('batch exceeds 64 MiB')
+        return selected
+
     def do_POST(self):
         url = urlsplit(self.path)
         if url.path != '/data/batch':
@@ -144,18 +160,7 @@ class Handler(SimpleHTTPRequestHandler):
             runs = json.loads(self.rfile.read(length))
             if not isinstance(runs, list) or len(runs) > 1000:
                 raise ValueError('invalid batch')
-            selected = []
-            data_root = (ROOT / 'data').resolve()
-            for name, start, end in runs:
-                if not isinstance(name, str) or type(start) is not int or type(end) is not int:
-                    raise ValueError('invalid file/range types')
-                file = (data_root / name).resolve()
-                if not file.is_relative_to(data_root) or start < 0 or end < start:
-                    raise ValueError('invalid file/range')
-                selected.append((file, start, max(0, min(end + 1, file.stat().st_size) - start)))
-            total = sum(n for _, _, n in selected)
-            if total > 64 * 1024 * 1024:
-                raise ValueError('batch exceeds 64 MiB')
+            selected = self.select_batch_runs(runs)
             output = io.BytesIO()
             for file, start, n in selected:
                 with file.open('rb') as source:

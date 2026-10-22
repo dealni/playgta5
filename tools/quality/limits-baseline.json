@@ -1,0 +1,46 @@
+{
+  "limits": {
+    "file": 500,
+    "complexity": 15,
+    "function": 150
+  },
+  "files": [
+    "build_installer.py",
+    "build_pages.py",
+    "build_web.py",
+    "download_game.py",
+    "sandbox_local.py",
+    "serve_local.py",
+    "verify_game.py"
+  ],
+  "functions": [
+    "build_installer.py:build",
+    "build_pages.py:build",
+    "build_pages.py:package_file",
+    "build_pages.py:patch_chunk_workers",
+    "build_pages.py:patch_startup",
+    "build_web.py:build",
+    "build_web.py:copy_verified_source",
+    "build_web.py:finish",
+    "build_web.py:patch_page",
+    "build_web.py:patch_worker",
+    "download_game.py:digest",
+    "download_game.py:download_part",
+    "download_game.py:extract_payload",
+    "download_game.py:install",
+    "download_game.py:payload",
+    "download_game.py:target_path",
+    "sandbox_local.py:SandboxHandler/end_headers",
+    "sandbox_local.py:SandboxHandler/list_directory",
+    "sandbox_local.py:SandboxHandler/parse_request",
+    "serve_local.py:Handler/__init__",
+    "serve_local.py:Handler/copyfile",
+    "serve_local.py:Handler/do_POST",
+    "serve_local.py:Handler/end_headers",
+    "serve_local.py:Handler/select_batch_runs",
+    "serve_local.py:Handler/send_head",
+    "serve_local.py:Handler/setup",
+    "serve_local.py:improve_game_page"
+  ],
+  "debt": {}
+}

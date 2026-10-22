@@ -10,3 +10,7 @@ pages-output/
 hosting-probe-output/
 .wrangler/
 release-output/
+node_modules/
+
+# Evidências locais e snapshots de revisão; binários são distribuídos via Releases.
+release-review/

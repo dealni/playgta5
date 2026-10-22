@@ -1,0 +1,21 @@
+{
+  "name": "playgta5-sandbox-checks",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "check:complexity": "node scripts/quality/check-complexity.ts && node scripts/quality/check-function-size.ts && python3 scripts/quality/limits.py",
+    "complexity:baseline": "node scripts/quality/check-complexity.ts --atualizar-baseline && node scripts/quality/check-function-size.ts --atualizar-baseline && python3 scripts/quality/limits.py --write-baseline",
+    "test:quality": "node --test scripts/quality/check-complexity.test.ts scripts/quality/check-function-size.test.ts",
+    "test": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v && node tests/test_chunk_fetch.cjs && node tests/test_capabilities.cjs && node tests/test_touch.cjs",
+    "check": "npm run check:complexity && npm run test:quality && npm test && node --check support/check.js && bash -n mac-launcher.sh",
+    "check:all": "npm run check"
+  },
+  "devDependencies": {
+    "typescript": "npm:@typescript/typescript6@6.0.2"
+  },
+  "engines": {
+    "node": ">=24.22.1 <25",
+    "npm": ">=12.2.1 <13"
+  },
+  "packageManager": "npm@12.2.1"
+}

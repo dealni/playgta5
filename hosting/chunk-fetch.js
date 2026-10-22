@@ -40,6 +40,19 @@
       job.then(resolve, reject).finally(() => signal.removeEventListener('abort', abort));
     });
   }
+  function rangeBounds(range, size) {
+    let start = 0, end = size - 1;
+    if (range) {
+      const match = /^bytes=(\d*)-(\d*)$/.exec(range);
+      if (!match || (!match[1] && !match[2])) return null;
+      if (!match[1]) start = Math.max(0, size - Number(match[2]));
+      else { start = Number(match[1]); if (match[2]) end = Math.min(end, Number(match[2])); }
+      if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start > end || start >= size) {
+        return null;
+      }
+    }
+    return {start, end};
+  }
   globalThis.fetch = async (input, options = {}) => {
     const request = new Request(input instanceof Request ? input : new URL(input, location.href), options);
     const url = new URL(request.url);
@@ -47,17 +60,10 @@
     if (!file || !['GET', 'HEAD'].includes(request.method)) return originalFetch(input, options);
     request.signal.throwIfAborted();
     const size = file.size, step = file.url ? size : manifest.chunkSize;
-    let start = 0, end = size - 1;
     const range = request.headers.get('Range');
-    if (range) {
-      const match = /^bytes=(\d*)-(\d*)$/.exec(range);
-      if (!match || (!match[1] && !match[2])) return new Response(null, {status: 416, headers: {'Content-Range': `bytes */${size}`}});
-      if (!match[1]) start = Math.max(0, size - Number(match[2]));
-      else { start = Number(match[1]); if (match[2]) end = Math.min(end, Number(match[2])); }
-      if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start > end || start >= size) {
-        return new Response(null, {status: 416, headers: {'Content-Range': `bytes */${size}`}});
-      }
-    }
+    const bounds = rangeBounds(range, size);
+    if (!bounds) return new Response(null, {status: 416, headers: {'Content-Range': `bytes */${size}`}});
+    const {start, end} = bounds;
     const headers = new Headers({'Content-Type': file.type, 'Content-Length': String(end - start + 1), 'Accept-Ranges': 'bytes'});
     if (range) headers.set('Content-Range', `bytes ${start}-${end}/${size}`);
     const responseInit = {status: range ? 206 : 200, headers};

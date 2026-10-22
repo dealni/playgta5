@@ -36,18 +36,22 @@
     addEventListener('mouseup', e => { if (e.isTrusted) physicalMouse &= ~(1 << [0,2,1,3,4][e.button]); }, true);
     const release = () => { physical.clear(); physicalMouse = 0; apply(empty()); remainderX = remainderY = 0; };
     addEventListener('blur', release); document.addEventListener('visibilitychange', () => { if (document.hidden) release(); });
+    function controllerInput(pad) {
+      const toggle = !!pad.buttons[8]?.pressed && !!pad.buttons[9]?.pressed;
+      if (toggle && !toggleHeld) driving = !driving;
+      if (toggle) toggleHeld = true;
+      const next = map(pad, driving);
+      if (toggleHeld) { next.keys.delete('Escape'); next.keys.delete('KeyV'); }
+      if (!pad.buttons[8]?.pressed && !pad.buttons[9]?.pressed) toggleHeld = false;
+      return next;
+    }
     function tick(now) {
       const dt = Math.min(.05, Math.max(0, (now - (last || now)) / 1000)); last = now;
       let pad; try { pad = [...getPads()].find(p => p?.connected && p.mapping === 'standard'); } catch {}
       if (!pad || document.hidden || !document.hasFocus() || !active()) {
         apply(touchInput(empty())); toggleHeld = false; status(pad ? 'Controller paused · ' + (driving ? 'Driving' : 'On foot') : 'Press a controller button to connect');
       } else {
-        const toggle = !!pad.buttons[8]?.pressed && !!pad.buttons[9]?.pressed;
-        if (toggle && !toggleHeld) driving = !driving;
-        if (toggle) toggleHeld = true;
-        const next = map(pad, driving);
-        if (toggleHeld) { next.keys.delete('Escape'); next.keys.delete('KeyV'); }
-        if (!pad.buttons[8]?.pressed && !pad.buttons[9]?.pressed) toggleHeld = false;
+        const next = controllerInput(pad);
         apply(touchInput(next));
         if (document.pointerLockElement === canvas) {
           remainderX += next.lookX * 900 * dt; remainderY += next.lookY * 900 * dt;

@@ -1,0 +1,28 @@
+{
+  "_leia": "Escrito por scripts/quality/check-complexity.ts. Somente tamanho e complexidade. Regrave com `npm run complexity:baseline`, não edite à mão.",
+  "tamanho": {
+    "limiares": {
+      "linhas": 500,
+      "complexidade": 15
+    },
+    "por_arquivo": {},
+    "por_funcao": {},
+    "arquivos": 4,
+    "linhas": 338,
+    "maior_arquivo": {
+      "caminho": "hosting/chunk-fetch.js",
+      "linhas": 102
+    },
+    "arquivos_grandes": 0,
+    "funcoes": 60,
+    "maior_funcao": {
+      "caminho": "support/controller.js",
+      "nome": "map",
+      "identidade": "chamada:<ArrowFunction>:/ArrowFunction/FunctionDeclaration:map",
+      "linha": 9,
+      "complexidade": 14
+    },
+    "funcoes_complexas": 0,
+    "medido_em": "2026-10-22"
+  }
+}

@@ -45,6 +45,24 @@ def finish(output):
     print('Ready: playable game at /; download/help page at /help/', flush=True)
 
 
+def copy_verified_source(source, output, records):
+    """Verify every local asset before copying; patched files get private inodes."""
+    for record in records:
+        relative = record['path'][len(PREFIX):]
+        original = target_path(source, relative)
+        if not original.is_file() or original.stat().st_size != record['bytes'] or digest(original) != record['sha256']:
+            raise ValueError(f'Source verification failed: {relative}')
+        destination = target_path(output, relative)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        if relative == 'index.html' or relative.endswith('/io_worker.js'):
+            shutil.copyfile(original, destination)  # Patched files must never share an inode with the original.
+        else:
+            try:
+                os.link(original, destination)
+            except OSError:
+                shutil.copyfile(original, destination)
+
+
 def build(output, source=None):
     inventory = json.loads((HERE / 'file-inventory.json').read_text(encoding='utf-8'))
     manifest = json.loads((HERE / 'download-manifest.json').read_text(encoding='utf-8'))
@@ -54,20 +72,7 @@ def build(output, source=None):
     output.parent.mkdir(parents=True, exist_ok=True)
     if source:
         output.mkdir()
-        for record in records:
-            relative = record['path'][len(PREFIX):]
-            original = target_path(source, relative)
-            if not original.is_file() or original.stat().st_size != record['bytes'] or digest(original) != record['sha256']:
-                raise ValueError(f'Source verification failed: {relative}')
-            destination = target_path(output, relative)
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            if relative == 'index.html' or relative.endswith('/io_worker.js'):
-                shutil.copyfile(original, destination)  # Patched files must never share an inode with the original.
-            else:
-                try:
-                    os.link(original, destination)
-                except OSError:
-                    shutil.copyfile(original, destination)
+        copy_verified_source(source, output, records)
         print(f'Verified {len(records)} local game files.', flush=True)
     else:
         # One archive at a time keeps peak disk usage close to the 21 GB extracted game.

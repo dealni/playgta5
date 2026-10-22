@@ -1,0 +1,12 @@
+# Portão local; não envia commits nem executa publicação.
+min_version: 2.1.12
+
+pre-commit:
+  jobs:
+    - name: limites-de-manutencao
+      run: CI=1 npm run check:complexity
+
+pre-push:
+  jobs:
+    - name: qualidade-local
+      run: CI=1 npm run check:all

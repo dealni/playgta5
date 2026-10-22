@@ -79,6 +79,16 @@ def package_file(original, destination, record, chunks, chunk_size=CHUNK_SIZE, f
                                      'type': mimetypes.guess_type(relative)[0] or 'application/octet-stream'}
 
 
+def patch_chunk_workers(output):
+    """Install chunk transport before each engine worker starts."""
+    for name in ['loader.js', 'io_worker.js']:
+        workers = list((output / 'b').glob('*/' + name))
+        if len(workers) != 1:
+            raise ValueError(f'Expected exactly one {name}')
+        worker = workers[0]
+        worker.write_text("importScripts('/chunk-index.js', '/chunk-fetch.js');\n" + worker.read_text(encoding='utf-8'), encoding='utf-8')
+
+
 def build(source, output):
     if output.exists():
         raise ValueError(f'Choose a fresh output directory: {output}')
@@ -100,12 +110,7 @@ def build(source, output):
     manifest = {'chunkSize': CHUNK_SIZE, 'files': chunks}
     (output / 'chunk-index.js').write_text('globalThis.GAME_CHUNKS=' + json.dumps(manifest, separators=(',', ':')) + ';\n', encoding='utf-8')
     shutil.copyfile(HERE / 'hosting/chunk-fetch.js', output / 'chunk-fetch.js')
-    for name in ['loader.js', 'io_worker.js']:
-        workers = list((output / 'b').glob('*/' + name))
-        if len(workers) != 1:
-            raise ValueError(f'Expected exactly one {name}')
-        worker = workers[0]
-        worker.write_text("importScripts('/chunk-index.js', '/chunk-fetch.js');\n" + worker.read_text(encoding='utf-8'), encoding='utf-8')
+    patch_chunk_workers(output)
     shutil.copytree(HERE / 'support', output / '__support', dirs_exist_ok=True)
     support = output / '__support/index.html'
     support.write_text(support.read_text(encoding='utf-8').replace('<script src="/__support/check.js">', '<script src="/chunk-index.js"></script><script src="/chunk-fetch.js"></script><script src="/__support/check.js">'), encoding='utf-8')

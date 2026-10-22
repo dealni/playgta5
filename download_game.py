@@ -65,6 +65,25 @@ def extract_payload(archive, root, records, windows=None):
         raise ValueError('Archive is missing expected game files')
 
 
+def download_part(root, cache, part, selected):
+    """Resume and verify one cached release archive before extraction."""
+    archive = target_path(cache, part['name'])
+    partial = archive.with_suffix(archive.suffix + '.partial')
+    remaining = sum(r['bytes'] for r in selected if not target_path(root, r['path']).exists())
+    download_bytes = 0 if archive.exists() else max(0, part['bytes'] - (partial.stat().st_size if partial.exists() else 0))
+    if shutil.disk_usage(root).free < remaining + download_bytes + 256 * 1024**2:
+        raise ValueError('Not enough disk space for the next archive and its extracted files.')
+    if not archive.exists():
+        print('Downloading:', part['name'], flush=True)
+        subprocess.run(['curl', '--fail', '--location', '--retry', '4', '--continue-at', '-', '--output', str(partial), part['url']], check=True)
+        if partial.stat().st_size != part['bytes'] or digest(partial) != part['sha256']:
+            raise ValueError(f'Checksum mismatch. Move aside {partial} and retry.')
+        partial.replace(archive)
+    if archive.stat().st_size != part['bytes'] or digest(archive) != part['sha256']:
+        raise ValueError(f'Checksum mismatch: {archive}')
+    return archive
+
+
 def install(root):
     manifest = json.loads((HERE / 'download-manifest.json').read_text(encoding='utf-8'))
     inventory = json.loads((HERE / 'file-inventory.json').read_text(encoding='utf-8'))
@@ -83,20 +102,7 @@ def install(root):
             if all(target_path(root, r['path']).is_file() and target_path(root, r['path']).stat().st_size == r['bytes'] for r in selected):
                 print('Already installed:', part['name'], flush=True)
                 continue
-        archive = target_path(cache, part['name'])
-        partial = archive.with_suffix(archive.suffix + '.partial')
-        remaining = sum(r['bytes'] for r in selected if not target_path(root, r['path']).exists())
-        download_bytes = 0 if archive.exists() else max(0, part['bytes'] - (partial.stat().st_size if partial.exists() else 0))
-        if shutil.disk_usage(root).free < remaining + download_bytes + 256 * 1024**2:
-            raise ValueError('Not enough disk space for the next archive and its extracted files.')
-        if not archive.exists():
-            print('Downloading:', part['name'], flush=True)
-            subprocess.run(['curl', '--fail', '--location', '--retry', '4', '--continue-at', '-', '--output', str(partial), part['url']], check=True)
-            if partial.stat().st_size != part['bytes'] or digest(partial) != part['sha256']:
-                raise ValueError(f'Checksum mismatch. Move aside {partial} and retry.')
-            partial.replace(archive)
-        if archive.stat().st_size != part['bytes'] or digest(archive) != part['sha256']:
-            raise ValueError(f'Checksum mismatch: {archive}')
+        archive = download_part(root, cache, part, selected)
         print('Extracting:', part['name'], flush=True)
         extract_payload(archive, root, records)
         receipt.write_text(part['sha256'], encoding='utf-8')

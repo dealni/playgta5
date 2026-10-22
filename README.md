@@ -170,3 +170,39 @@ The compatibility page checks WebAssembly Memory64, basic WebGPU device creation
 ## Development checks
 
 Run `python3 -m unittest discover -s tests -v`, `node --check support/check.js`, and `bash -n mac-launcher.sh`. Tests cover the installer bundle, preservation/resume, checksums, unsafe paths, isolation headers, range reads, both batch formats, malformed requests, hosted startup checks, and cached piece reconstruction. With Node 24+, `node tests/check_hosted_transport.cjs https://YOUR_PROJECT.pages.dev` checks deployed headers, cross-piece ranges, the complete engine checksum, streaming compilation, and real 404 responses against the local mirror. This is a network/engine test, not a gameplay test. An existing mirror can be tested without copying it: `python3 serve_local.py --root /path/to/playgta5.com --port 8001 --open`.
+
+
+## Limites de manutenção
+
+A política local usa **500 linhas físicas por arquivo**, **complexidade ciclomática
+15 por função** e **150 linhas efetivas por função** para registrar dívida. Linhas efetivas ignoram comentários e vazios;
+marcação JSX não entra no tamanho da função, mas expressões e callbacks entram.
+Funções aninhadas têm complexidade própria; seu texto ainda faz parte do tamanho
+da função externa. Métricas identificam candidatos à revisão, não defeitos sozinhas.
+
+`npm run check:complexity` mede o código e recusa dívida nova ou piora de cada
+exceção individual. O legado está em `tools/quality/tamanho-baseline.json` e
+`tamanho-funcoes-baseline.json`; reduzir uma função ao limite remove seu cap.
+`CI=1` é somente leitura. `npm run complexity:baseline` é uma migração explícita
+que exige revisão do diff, nunca uma etapa automática para destravar testes.
+Os testes do gate rodam em `npm run test:quality`, dentro de `check`/`check:all`.
+
+Execute `npm ci` para instalar somente a API AST de desenvolvimento e então
+`CI=1 npm run check:all`. O comando inclui as suítes Python e JS locais existentes;
+não executa o teste de transporte hospedado nem consulta produção.
+O escopo JS é `support/` e `hosting/`. Python mede os sete helpers próprios da
+raiz (`*.py`) por AST/tokenize, incluindo `sandbox_local.py`; o engine compilado,
+`mirror/`, `public/` estático, `runtime/` e `release-review/` ficam fora. Testes e
+ferramentas do gate são infraestrutura, não código distribuído de produto aqui.
+Os contadores de ramos são específicos de cada AST; o limiar é comum.
+
+O Python usa `tools/quality/limits.json` e `limits-baseline.json`; lambdas têm
+identidade própria. Seu `--write-baseline` permite remover escopo explicitamente
+e reduzir caps, mas nunca adicionar ou aumentar dívida em baseline existente.
+
+O Lefthook instalado pelo Homebrew (`brew install lefthook`, versão mínima
+2.1.12) executa os limites em `pre-commit` e o gate
+completo em `pre-push`, sempre com `CI=1`, sem autofix ou stage automático.
+Após `npm ci`, instale os hooks com `lefthook install`. Para validar o portão
+manualmente, sem commit ou push, use
+`lefthook run pre-push --force --no-auto-install`.

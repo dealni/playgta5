@@ -23,33 +23,42 @@ for (const link of launchLinks) link.addEventListener('click', e => {
   }
 });
 report.startupFailure = new URLSearchParams(location.search).get('startup') || undefined;
+async function checkStorage() {
+  try {
+    report.storagePersisted = await navigator.storage?.persisted();
+    const estimate = await navigator.storage?.estimate();
+    report.storageUsageMB = estimate ? Math.round(estimate.usage / 1048576) : 'not reported';
+    report.storageQuotaMB = estimate ? Math.round(estimate.quota / 1048576) : 'not reported';
+  } catch { report.storageCheck = 'unavailable'; }
+}
+async function checkAssets() {
+  const response = await fetch('/', { cache: 'no-store' });
+  report.pageHTTP = response.status;
+  const html = await response.text();
+  const build = html.match(/\/b\/([a-zA-Z0-9_-]+)\//);
+  if (build) {
+    const wasm = await fetch(`/b/${build[1]}/game.wasm`, { headers: { Range: 'bytes=0-3' } });
+    report.wasmHTTP = wasm.status;
+    if (wasm.status === 206) {
+      report.wasmSignature = Array.from(new Uint8Array(await wasm.arrayBuffer())).join(',') === '0,97,115,109';
+    } else {
+      await wasm.body?.cancel();
+      report.wasmSignature = false;
+    }
+  } else report.assetCheck = 'Cannot identify build; run file verification.';
+}
+function checkRequirements() {
+  if (!report.secureContext) throw new Error('This engine requires HTTPS or localhost.');
+  if (!report.crossOriginIsolated || !report.sharedArrayBuffer) throw new Error('Shared WebAssembly memory is unavailable. Open the site directly in your browser, outside embedded app browsers.');
+  if (!report.wasmMemory64) throw new Error('This browser does not support the shared 64-bit WebAssembly memory required by this game. On iPhone/iPad, check for an iOS update and rerun this check. Lower-memory mode cannot fix this requirement; this engine cannot run in your current browser.');
+  if (!report.offscreenCanvas) throw new Error('OffscreenCanvas is unavailable; this engine cannot render in the current browser.');
+}
 async function check() {
   let device;
   try {
-    try {
-      report.storagePersisted = await navigator.storage?.persisted();
-      const estimate = await navigator.storage?.estimate();
-      report.storageUsageMB = estimate ? Math.round(estimate.usage / 1048576) : 'not reported';
-      report.storageQuotaMB = estimate ? Math.round(estimate.quota / 1048576) : 'not reported';
-    } catch { report.storageCheck = 'unavailable'; }
-    if (!report.secureContext) throw new Error('This engine requires HTTPS or localhost.');
-    if (!report.crossOriginIsolated || !report.sharedArrayBuffer) throw new Error('Shared WebAssembly memory is unavailable. Open the site directly in your browser, outside embedded app browsers.');
-    if (!report.wasmMemory64) throw new Error('This browser does not support the shared 64-bit WebAssembly memory required by this game. On iPhone/iPad, check for an iOS update and rerun this check. Lower-memory mode cannot fix this requirement; this engine cannot run in your current browser.');
-    if (!report.offscreenCanvas) throw new Error('OffscreenCanvas is unavailable; this engine cannot render in the current browser.');
-    const response = await fetch('/', { cache: 'no-store' });
-    report.pageHTTP = response.status;
-    const html = await response.text();
-    const build = html.match(/\/b\/([a-zA-Z0-9_-]+)\//);
-    if (build) {
-      const wasm = await fetch(`/b/${build[1]}/game.wasm`, { headers: { Range: 'bytes=0-3' } });
-      report.wasmHTTP = wasm.status;
-      if (wasm.status === 206) {
-        report.wasmSignature = Array.from(new Uint8Array(await wasm.arrayBuffer())).join(',') === '0,97,115,109';
-      } else {
-        await wasm.body?.cancel();
-        report.wasmSignature = false;
-      }
-    } else report.assetCheck = 'Cannot identify build; run file verification.';
+    await checkStorage();
+    checkRequirements();
+    await checkAssets();
     if (!navigator.gpu) throw new Error('WebGPU unavailable. Check browser updates and graphics acceleration.');
     const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
     if (!adapter) throw new Error('No WebGPU adapter available. Check chrome://gpu or edge://gpu.');
